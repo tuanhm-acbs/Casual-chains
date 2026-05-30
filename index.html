@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>IELTS Chain Trainer</title>
+<style>
+:root{--bg:#f7f8fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#0f766e;--red:#b91c1c;--orange:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;line-height:1.45}
+.app{max-width:760px;margin:auto;padding:16px 14px 90px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:19px;margin:0 0 12px} p{margin:8px 0}
+.small{font-size:13px;color:var(--muted)} .big{font-size:22px;font-weight:850}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 6px 20px rgba(17,24,39,.05)}
+.hero{background:linear-gradient(135deg,#111827,#26364f);color:white;border:0}.hero .small{color:#d1d5db}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+button,select,input,textarea{font:inherit}button{border:0;border-radius:15px;padding:13px 14px;background:var(--dark);color:white;font-weight:800;min-height:48px}
+button.secondary{background:#e5e7eb;color:#111827}button.ghost{background:white;color:#111827;border:1px solid var(--line)}
+button.good{background:var(--green)}button.bad{background:var(--red)}button.warn{background:var(--orange)}
+select,input,textarea{width:100%;border:1px solid var(--line);border-radius:15px;padding:14px;background:white;margin:6px 0}
+textarea{min-height:110px}.correct{border-color:var(--green)!important;background:#ecfdf5}.wrong{border-color:var(--red)!important;background:#fef2f2}
+.stat{background:white;color:#111827;border-radius:16px;padding:10px;text-align:center}.stat b{font-size:18px}
+.pill{display:inline-block;padding:5px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:800;margin:0 6px 6px 0}
+.chain-line{padding:10px 0;border-bottom:1px dashed var(--line)}.chain-line:last-child{border-bottom:0}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.nav button{background:transparent;color:#111827;border-radius:0;font-size:12px;padding:10px 3px}.nav button.active{background:#111827;color:white}
+.hidden{display:none!important}.progressbar{height:11px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progressbar span{display:block;height:100%;background:#111827}
+.topic-card{background:white;border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0}.topic-row{display:flex;justify-content:space-between}
+.timer{font-size:44px;font-weight:950;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>IELTS Chain Trainer</h1>
+  <div class="small" id="summary"></div>
+
+  <section id="home">
+    <div class="card hero">
+      <h2>Today's Review</h2>
+      <div class="grid4">
+        <div class="stat"><b id="due">0</b><br><span class="small">Due</span></div>
+        <div class="stat"><b id="learned">0</b><br><span class="small">Learned</span></div>
+        <div class="stat"><b id="xp">0</b><br><span class="small">XP</span></div>
+        <div class="stat"><b id="streak">0</b><br><span class="small">Streak</span></div>
+      </div>
+      <p class="small">Learn by active recall, not rereading.</p>
+      <div class="grid2">
+        <button class="good" onclick="startReview()">Start Review</button>
+        <button class="secondary" onclick="startNew()">Learn New</button>
+      </div>
+      <button class="ghost" onclick="startRandom()">Random Chain</button>
+    </div>
+    <div class="card">
+      <h2>Choose Topic</h2>
+      <select id="topic"></select>
+      <button class="ghost" onclick="readChains()">Read Selected Topic</button>
+    </div>
+  </section>
+
+  <section id="cardScreen" class="hidden">
+    <div class="card">
+      <span class="pill" id="ctopic"></span>
+      <p class="small" id="cmeta"></p>
+      <p class="big" id="prompt"></p>
+      <div id="inputs"></div>
+      <div class="grid2">
+        <button onclick="check()">Check</button>
+        <button class="secondary" onclick="showAnswer(null)">Reveal</button>
+      </div>
+    </div>
+    <div id="answer" class="card hidden"></div>
+  </section>
+
+  <section id="read" class="hidden">
+    <div class="card">
+      <h2 id="readTitle">Chains</h2>
+      <div id="readBox"></div>
+    </div>
+  </section>
+
+  <section id="games" class="hidden">
+    <div class="card">
+      <h2>Games</h2>
+      <div class="grid2">
+        <button onclick="missingWord()">Missing Word</button>
+        <button class="secondary" onclick="battle()">20s Battle</button>
+      </div>
+    </div>
+    <div id="gameBox"></div>
+  </section>
+</div>
+
+<div class="nav">
+  <button id="nHome" class="active" onclick="show('home')">Home</button>
+  <button id="nRead" onclick="readChains()">Read</button>
+  <button id="nGames" onclick="show('games')">Games</button>
+  <button id="nStats" onclick="showStats()">Stats</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+const CHAINS = window.CHAINS || [];
+const DAY=86400000;
+let S=JSON.parse(localStorage.getItem("ieltsSimpleState")||"{}");
+if(!S.cards)S.cards={}; if(!S.xp)S.xp=0; if(!S.streak)S.streak=0; if(!S.lastDay)S.lastDay="";
+let current=null, queue=[], timer=null;
+
+function key(c){return c.topic+"-"+c.num+"-"+c.title+"-"+c.start}
+function rec(c){let k=key(c); if(!S.cards[k])S.cards[k]={level:0,due:0,seen:0,correct:0}; return S.cards[k]}
+function save(){localStorage.setItem("ieltsSimpleState",JSON.stringify(S)); stats()}
+function norm(s){return (s||"").toLowerCase().trim().replace(/[.,;:]/g,"").replace(/\s+/g," ")}
+function pool(){let t=document.getElementById("topic").value; return t==="ALL"?CHAINS:CHAINS.filter(c=>c.topic===t)}
+function dueCards(){let now=Date.now(); return pool().filter(c=>rec(c).due<=now)}
+function newCards(){return pool().filter(c=>rec(c).seen===0).slice(0,10)}
+function days(level,g){if(g==="again")return 20*60*1000;if(g==="hard")return Math.max(.5,level)*DAY;if(g==="good")return [1,2,4,7,14,30,60][Math.min(level,6)]*DAY;return [2,4,7,14,30,60,120][Math.min(level,6)]*DAY}
+
+function show(id){
+ ["home","cardScreen","read","games"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+ ["nHome","nRead","nGames","nStats"].forEach(x=>document.getElementById(x).classList.remove("active"));
+ if(id==="home")document.getElementById("nHome").classList.add("active");
+ if(id==="read")document.getElementById("nRead").classList.add("active");
+ if(id==="games")document.getElementById("nGames").classList.add("active");
+}
+function stats(){
+ document.getElementById("due").textContent=dueCards().length;
+ document.getElementById("learned").textContent=Object.values(S.cards).filter(r=>r.level>=2).length;
+ document.getElementById("xp").textContent=S.xp;
+ document.getElementById("streak").textContent=S.streak;
+ document.getElementById("summary").textContent=CHAINS.length+" chains • "+new Set(CHAINS.map(c=>c.topic)).size+" topics";
+}
+function init(){
+ let topics=[...new Set(CHAINS.map(c=>c.topic))].sort();
+ document.getElementById("topic").innerHTML="<option value='ALL'>All topics</option>"+topics.map(t=>`<option>${t}</option>`).join("");
+ stats();
+}
+function startReview(){queue=dueCards(); if(!queue.length)queue=pool().sort(()=>Math.random()-.5).slice(0,20); next()}
+function startNew(){queue=newCards(); if(!queue.length)queue=pool().sort(()=>Math.random()-.5).slice(0,10); next()}
+function startRandom(){queue=pool().sort(()=>Math.random()-.5); next()}
+function next(){
+ current=queue.shift()||pool()[Math.floor(Math.random()*pool().length)];
+ show("cardScreen");
+ document.getElementById("ctopic").textContent=current.topic;
+ document.getElementById("cmeta").textContent="Chain "+current.num+" — "+current.title;
+ document.getElementById("prompt").textContent=current.start+" → ?";
+ document.getElementById("inputs").innerHTML=[1,2,3,4].map(i=>`<input id="s${i}" placeholder="Step ${i}" autocomplete="off">`).join("");
+ document.getElementById("answer").classList.add("hidden");
+}
+function check(){
+ let score=0;
+ for(let i=1;i<=4;i++){let el=document.getElementById("s"+i); if(norm(el.value)===norm(current.steps[i-1])){score++;el.className="correct"}else el.className="wrong"}
+ showAnswer(score);
+}
+function showAnswer(score){
+ let a=document.getElementById("answer"); a.classList.remove("hidden");
+ a.innerHTML=(score===null?"":`<h2>Score: ${score}/4</h2>`)+"<p><b>Correct chain</b></p>"+[current.start,...current.steps].map(x=>`<div class='chain-line'>${x}</div>`).join("")+
+ `<p class='small'>Grade your memory:</p><div class='grid4'><button class='bad' onclick="grade('again')">Again</button><button class='warn' onclick="grade('hard')">Hard</button><button class='good' onclick="grade('good')">Good</button><button onclick="grade('easy')">Easy</button></div>`;
+}
+function grade(g){
+ let r=rec(current); r.seen++; if(g==="again")r.level=0; else r.level=Math.min(7,r.level+(g==="easy"?2:1)); if(g==="good"||g==="easy")r.correct++;
+ r.due=Date.now()+days(r.level,g); S.xp+=g==="again"?1:g==="hard"?3:g==="good"?6:10;
+ let d=new Date().toISOString().slice(0,10); if(S.lastDay!==d){S.streak++;S.lastDay=d}
+ save(); next();
+}
+function readChains(){
+ show("read");
+ let p=pool(), t=document.getElementById("topic").value;
+ document.getElementById("readTitle").textContent=(t==="ALL"?"All":t)+" Chains";
+ document.getElementById("readBox").innerHTML=p.map(c=>`<div class='card'><span class='pill'>${c.topic}</span><p><b>Chain ${c.num} — ${c.title}</b></p>${[c.start,...c.steps].map(x=>`<div class='chain-line'>${x}</div>`).join("")}</div>`).join("");
+}
+function missingWord(){
+ show("games"); let c=pool()[Math.floor(Math.random()*pool().length)], idx=Math.floor(Math.random()*4), words=c.steps[idx].split(" "), wi=Math.floor(Math.random()*words.length), ans=words[wi]; words[wi]="______";
+ document.getElementById("gameBox").innerHTML=`<div class='card'><span class='pill'>${c.topic}</span><p><b>${c.start}</b></p><p>${c.steps.map((s,i)=>i===idx?words.join(" "):s).join(" → ")}</p><input id='miss' placeholder='Missing word'><button onclick="document.getElementById('mr').innerHTML=(norm(document.getElementById('miss').value)===norm('${ans.replace(/'/g,"\'")}')?'✅ Correct':'❌ Answer: ${ans.replace(/'/g,"\'")}')">Check</button><p id='mr'></p></div>`;
+}
+function battle(){
+ show("games"); let t=20; current=pool()[Math.floor(Math.random()*pool().length)];
+ document.getElementById("gameBox").innerHTML=`<div class='card'><div class='timer' id='tm'>20</div><span class='pill'>${current.topic}</span><p class='big'>${current.start} → ?</p><textarea id='bt' placeholder='Type the full chain'></textarea><button onclick='finishBattle()'>Finish</button><div id='br'></div></div>`;
+ clearInterval(timer); timer=setInterval(()=>{t--;document.getElementById("tm").textContent=t;if(t<=0)finishBattle()},1000);
+}
+function finishBattle(){
+ clearInterval(timer); let txt=norm(document.getElementById("bt").value), score=0; current.steps.forEach(s=>{if(txt.includes(norm(s)))score++});
+ document.getElementById("br").innerHTML=`<h2>Score: ${score}/4</h2><p>${[current.start,...current.steps].join(" → ")}</p>`;
+}
+function showStats(){
+ show("read"); document.getElementById("nStats").classList.add("active"); document.getElementById("readTitle").textContent="Progress";
+ let by={}; CHAINS.forEach(c=>{by[c.topic]??=[0,0]; by[c.topic][0]++; if((S.cards[key(c)]||{}).level>=2)by[c.topic][1]++});
+ document.getElementById("readBox").innerHTML=Object.entries(by).sort().map(([t,a])=>`<div class='topic-card'><div class='topic-row'><b>${t}</b><span class='small'>${a[1]}/${a[0]}</span></div><div class='progressbar'><span style='width:${Math.round(100*a[1]/a[0])}%'></span></div></div>`).join("")+"<button class='ghost' onclick='localStorage.removeItem("ieltsSimpleState");location.reload()'>Reset Progress</button>";
+}
+init();
+</script>
+</body>
+</html>
