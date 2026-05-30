@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IELTS Chain Trainer</title>
+<style>
+:root{--bg:#f7f8fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#0f766e;--red:#b91c1c;--orange:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;line-height:1.45}
+.app{max-width:760px;margin:auto;padding:16px 14px 90px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:19px;margin:0 0 12px} p{margin:8px 0}
+.small{font-size:13px;color:var(--muted)} .big{font-size:22px;font-weight:850}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 6px 20px rgba(17,24,39,.05)}
+.hero{background:linear-gradient(135deg,#111827,#26364f);color:white;border:0}.hero .small{color:#d1d5db}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+button,select,input,textarea{font:inherit}button{border:0;border-radius:15px;padding:13px 14px;background:var(--dark);color:white;font-weight:800;min-height:48px}
+button.secondary{background:#e5e7eb;color:#111827}button.ghost{background:white;color:#111827;border:1px solid var(--line)}
+button.good{background:var(--green)}button.bad{background:var(--red)}button.warn{background:var(--orange)}
+select,input,textarea{width:100%;border:1px solid var(--line);border-radius:15px;padding:14px;background:white;margin:6px 0}
+textarea{min-height:110px}.correct{border-color:var(--green)!important;background:#ecfdf5}.wrong{border-color:var(--red)!important;background:#fef2f2}
+.stat{background:white;color:#111827;border-radius:16px;padding:10px;text-align:center}.stat b{font-size:18px}
+.pill{display:inline-block;padding:5px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:800;margin:0 6px 6px 0}
+.chain-line{padding:10px 0;border-bottom:1px dashed var(--line)}.chain-line:last-child{border-bottom:0}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.nav button{background:transparent;color:#111827;border-radius:0;font-size:12px;padding:10px 3px}.nav button.active{background:#111827;color:white}
+.hidden{display:none!important}.progressbar{height:11px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progressbar span{display:block;height:100%;background:#111827}
+.topic-card{background:white;border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0}.topic-row{display:flex;justify-content:space-between}
+.timer{font-size:44px;font-weight:950;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>IELTS Chain Trainer</h1>
+  <div class="small" id="summary">Loading...</div>
+
+  <section id="home">
+    <div class="card hero">
+      <h2>Today's Review</h2>
+      <div class="grid4">
+        <div class="stat"><b id="due">0</b><br><span class="small">Due</span></div>
+        <div class="stat"><b id="learned">0</b><br><span class="small">Learned</span></div>
+        <div class="stat"><b id="xp">0</b><br><span class="small">XP</span></div>
+        <div class="stat"><b id="streak">0</b><br><span class="small">Streak</span></div>
+      </div>
+      <p class="small">Learn by active recall, not rereading.</p>
+      <div class="grid2">
+        <button class="good" onclick="startReview()">Start Review</button>
+        <button class="secondary" onclick="startNew()">Learn New</button>
+      </div>
+      <button class="ghost" onclick="startRandom()">Random Chain</button>
+    </div>
+    <div class="card">
+      <h2>Choose Topic</h2>
+      <select id="topic"></select>
+      <button class="ghost" onclick="readChains()">Read Selected Topic</button>
+    </div>
+  </section>
+
+  <section id="cardScreen" class="hidden">
+    <div class="card">
+      <span class="pill" id="ctopic"></span>
+      <p class="small" id="cmeta"></p>
+      <p class="big" id="prompt"></p>
+      <div id="inputs"></div>
+      <div class="grid2">
+        <button onclick="check()">Check</button>
+        <button class="secondary" onclick="showAnswer(-1)">Reveal</button>
+      </div>
+    </div>
+    <div id="answer" class="card hidden"></div>
+  </section>
+
+  <section id="read" class="hidden">
+    <div class="card">
+      <h2 id="readTitle">Chains</h2>
+      <div id="readBox"></div>
+    </div>
+  </section>
+
+  <section id="games" class="hidden">
+    <div class="card">
+      <h2>Games</h2>
+      <div class="grid2">
+        <button onclick="missingWord()">Missing Word</button>
+        <button class="secondary" onclick="battle()">20s Battle</button>
+      </div>
+    </div>
+    <div id="gameBox"></div>
+  </section>
+</div>
+
+<div class="nav">
+  <button id="nHome" class="active" onclick="show('home')">Home</button>
+  <button id="nRead" onclick="readChains()">Read</button>
+  <button id="nGames" onclick="show('games')">Games</button>
+  <button id="nStats" onclick="showStats()">Stats</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+var CHAINS = window.CHAINS || [];
+var DAY = 86400000;
+var S = {};
+try { S = JSON.parse(localStorage.getItem("ieltsSimpleState") || "{}"); } catch(e) { S = {}; }
+if(!S.cards){S.cards={};}
+if(!S.xp){S.xp=0;}
+if(!S.streak){S.streak=0;}
+if(!S.lastDay){S.lastDay="";}
+var current = null;
+var queue = [];
+var timer = null;
+
+function byId(id){ return document.getElementById(id); }
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function key(c){ return c.topic+"-"+c.num+"-"+c.title+"-"+c.start; }
+function rec(c){
+  var k = key(c);
+  if(!S.cards[k]){ S.cards[k] = {level:0,due:0,seen:0,correct:0}; }
+  return S.cards[k];
+}
+function save(){ localStorage.setItem("ieltsSimpleState", JSON.stringify(S)); stats(); }
+function norm(s){ return String(s || "").toLowerCase().trim().replace(/[.,;:]/g,"").replace(/\s+/g," "); }
+function selectedTopic(){ var el = byId("topic"); return el && el.value ? el.value : "ALL"; }
+function pool(){
+  var t = selectedTopic();
+  if(t === "ALL"){ return CHAINS; }
+  var arr = [];
+  for(var i=0;i<CHAINS.length;i++){ if(CHAINS[i].topic === t){ arr.push(CHAINS[i]); } }
+  return arr;
+}
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return a;
+}
+function dueCards(){
+  var p = pool(), now = Date.now(), arr = [];
+  for(var i=0;i<p.length;i++){ if(rec(p[i]).due <= now){ arr.push(p[i]); } }
+  return arr;
+}
+function newCards(){
+  var p = pool(), arr = [];
+  for(var i=0;i<p.length;i++){ if(rec(p[i]).seen === 0){ arr.push(p[i]); } if(arr.length >= 10){ break; } }
+  return arr;
+}
+function intervalMs(level,g){
+  if(g==="again"){ return 20*60*1000; }
+  if(g==="hard"){ return Math.max(0.5,level)*DAY; }
+  var good=[1,2,4,7,14,30,60], easy=[2,4,7,14,30,60,120];
+  if(g==="good"){ return good[Math.min(level,6)]*DAY; }
+  return easy[Math.min(level,6)]*DAY;
+}
+function show(id){
+  byId("home").classList.add("hidden"); byId("cardScreen").classList.add("hidden"); byId("read").classList.add("hidden"); byId("games").classList.add("hidden");
+  byId(id).classList.remove("hidden");
+  byId("nHome").classList.remove("active"); byId("nRead").classList.remove("active"); byId("nGames").classList.remove("active"); byId("nStats").classList.remove("active");
+  if(id==="home"){ byId("nHome").classList.add("active"); }
+  if(id==="read"){ byId("nRead").classList.add("active"); }
+  if(id==="games"){ byId("nGames").classList.add("active"); }
+}
+function uniqueTopics(){
+  var seen = {}, topics = [];
+  for(var i=0;i<CHAINS.length;i++){ var t = CHAINS[i].topic; if(!seen[t]){ seen[t]=true; topics.push(t); } }
+  topics.sort();
+  return topics;
+}
+function stats(){
+  var due = 0;
+  try { due = dueCards().length; } catch(e) { due = 0; }
+  var learned = 0;
+  for(var k in S.cards){ if(S.cards[k] && S.cards[k].level >= 2){ learned++; } }
+  byId("due").textContent = due; byId("learned").textContent = learned; byId("xp").textContent = S.xp; byId("streak").textContent = S.streak;
+  byId("summary").textContent = CHAINS.length + " chains • " + uniqueTopics().length + " topics";
+}
+function init(){
+  var sel = byId("topic"), topics = uniqueTopics(), html = '<option value="ALL">All topics</option>';
+  for(var i=0;i<topics.length;i++){ html += '<option value="' + escapeHtml(topics[i]) + '">' + escapeHtml(topics[i]) + '</option>'; }
+  sel.innerHTML = html;
+  stats();
+}
+function startReview(){ queue = dueCards(); if(queue.length === 0){ queue = shuffle(pool()).slice(0,20); } next(); }
+function startNew(){ queue = newCards(); if(queue.length === 0){ queue = shuffle(pool()).slice(0,10); } next(); }
+function startRandom(){ queue = shuffle(pool()); next(); }
+function next(){
+  var p = pool();
+  current = queue.shift() || p[Math.floor(Math.random()*p.length)];
+  if(!current){ alert("No chains found. Check data.js."); return; }
+  show("cardScreen");
+  byId("ctopic").textContent = current.topic; byId("cmeta").textContent = "Chain " + current.num + " — " + current.title; byId("prompt").textContent = current.start + " → ?";
+  var html = "";
+  for(var i=1;i<=4;i++){ html += '<input id="s' + i + '" placeholder="Step ' + i + '" autocomplete="off">'; }
+  byId("inputs").innerHTML = html; byId("answer").classList.add("hidden");
+}
+function check(){
+  var score = 0;
+  for(var i=1;i<=4;i++){ var el = byId("s"+i); if(norm(el.value) === norm(current.steps[i-1])){ score++; el.className = "correct"; } else { el.className = "wrong"; } }
+  showAnswer(score);
+}
+function showAnswer(score){
+  var a = byId("answer"); a.classList.remove("hidden");
+  var html = "";
+  if(score >= 0){ html += "<h2>Score: " + score + "/4</h2>"; }
+  html += "<p><b>Correct chain</b></p>";
+  var all = [current.start].concat(current.steps);
+  for(var i=0;i<all.length;i++){ html += "<div class='chain-line'>" + escapeHtml(all[i]) + "</div>"; }
+  html += "<p class='small'>Grade your memory:</p><div class='grid4'><button class='bad' onclick=\"grade('again')\">Again</button><button class='warn' onclick=\"grade('hard')\">Hard</button><button class='good' onclick=\"grade('good')\">Good</button><button onclick=\"grade('easy')\">Easy</button></div>";
+  a.innerHTML = html;
+}
+function grade(g){
+  var r = rec(current); r.seen++;
+  if(g === "again"){ r.level = 0; } else { r.level = Math.min(7, r.level + (g==="easy" ? 2 : 1)); }
+  if(g==="good" || g==="easy"){ r.correct++; }
+  r.due = Date.now() + intervalMs(r.level,g);
+  S.xp += (g==="again" ? 1 : g==="hard" ? 3 : g==="good" ? 6 : 10);
+  var d = new Date().toISOString().slice(0,10);
+  if(S.lastDay !== d){ S.streak++; S.lastDay = d; }
+  save(); next();
+}
+function readChains(){
+  show("read");
+  var p = pool(), t = selectedTopic();
+  byId("readTitle").textContent = (t==="ALL" ? "All" : t) + " Chains";
+  var html = "";
+  for(var i=0;i<p.length;i++){
+    var c = p[i];
+    html += "<div class='card'><span class='pill'>" + escapeHtml(c.topic) + "</span><p><b>Chain " + c.num + " — " + escapeHtml(c.title) + "</b></p>";
+    var all = [c.start].concat(c.steps);
+    for(var j=0;j<all.length;j++){ html += "<div class='chain-line'>" + escapeHtml(all[j]) + "</div>"; }
+    html += "</div>";
+  }
+  byId("readBox").innerHTML = html;
+}
+function missingWord(){
+  show("games");
+  var p = pool(), c = p[Math.floor(Math.random()*p.length)];
+  if(!c){ return; }
+  var idx = Math.floor(Math.random()*4), words = c.steps[idx].split(" "), wi = Math.floor(Math.random()*words.length), ans = words[wi];
+  words[wi] = "______";
+  var shown = [];
+  for(var i=0;i<4;i++){ shown.push(i===idx ? words.join(" ") : c.steps[i]); }
+  byId("gameBox").innerHTML = "<div class='card'><span class='pill'>" + escapeHtml(c.topic) + "</span><p><b>" + escapeHtml(c.start) + "</b></p><p>" + escapeHtml(shown.join(" → ")) + "</p><input id='miss' placeholder='Missing word'><button onclick='checkMissing()'>Check</button><p id='mr'></p></div>";
+  window.currentMissingAnswer = ans;
+}
+function checkMissing(){
+  var ok = norm(byId("miss").value) === norm(window.currentMissingAnswer);
+  byId("mr").textContent = ok ? "✅ Correct" : "❌ Answer: " + window.currentMissingAnswer;
+}
+function battle(){
+  show("games");
+  var p = pool();
+  current = p[Math.floor(Math.random()*p.length)];
+  if(!current){ return; }
+  var t = 20;
+  byId("gameBox").innerHTML = "<div class='card'><div class='timer' id='tm'>20</div><span class='pill'>" + escapeHtml(current.topic) + "</span><p class='big'>" + escapeHtml(current.start) + " → ?</p><textarea id='bt' placeholder='Type the full chain'></textarea><button onclick='finishBattle()'>Finish</button><div id='br'></div></div>";
+  clearInterval(timer);
+  timer = setInterval(function(){ t--; if(byId("tm")){ byId("tm").textContent = t; } if(t <= 0){ finishBattle(); } },1000);
+}
+function finishBattle(){
+  clearInterval(timer);
+  var txt = norm(byId("bt").value), score = 0;
+  for(var i=0;i<current.steps.length;i++){ if(txt.indexOf(norm(current.steps[i])) >= 0){ score++; } }
+  byId("br").innerHTML = "<h2>Score: " + score + "/4</h2><p>" + escapeHtml([current.start].concat(current.steps).join(" → ")) + "</p>";
+}
+function showStats(){
+  show("read");
+  byId("nStats").classList.add("active");
+  byId("readTitle").textContent = "Progress";
+  var by = {};
+  for(var i=0;i<CHAINS.length;i++){
+    var c = CHAINS[i], t = c.topic;
+    if(!by[t]){ by[t] = [0,0]; }
+    by[t][0]++;
+    var r = S.cards[key(c)];
+    if(r && r.level >= 2){ by[t][1]++; }
+  }
+  var topics = [];
+  for(var name in by){ topics.push(name); }
+  topics.sort();
+  var html = "";
+  for(var j=0;j<topics.length;j++){
+    var nm = topics[j], a = by[nm], pct = Math.round(100*a[1]/a[0]);
+    html += "<div class='topic-card'><div class='topic-row'><b>" + escapeHtml(nm) + "</b><span class='small'>" + a[1] + "/" + a[0] + "</span></div><div class='progressbar'><span style='width:" + pct + "%'></span></div></div>";
+  }
+  html += "<button class='ghost' onclick='resetProgress()'>Reset Progress</button>";
+  byId("readBox").innerHTML = html;
+}
+function resetProgress(){ if(confirm("Reset all progress?")){ localStorage.removeItem("ieltsSimpleState"); location.reload(); } }
+init();
+</script>
+</body>
+</html>
